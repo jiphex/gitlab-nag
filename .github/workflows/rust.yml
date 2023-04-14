@@ -21,6 +21,7 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
     - name: Rust Release binary
-      uses: rust-build/rust-build.action@v1.4.3with:
-      # Output target
-      RUSTTARGET: x86_64-unknown-linux-gnu
+      uses: rust-build/rust-build.action@v1.4.3
+      with:
+        # Output target
+        RUSTTARGET: x86_64-unknown-linux-gnu
