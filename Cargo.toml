@@ -1,0 +1,15 @@
+[package]
+    name = "gitlab-nag"
+    version = "0.1.0"
+    edition = "2021"
+
+    # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+    reqwest = { version = "0.11.16" }
+    anyhow = "1.0.70"
+    clap = { version = "4.2.2", features = ["derive", "env"] }
+    gitlab = { version = "0.1510.0", features = ["reqwest"] }
+    secrecy = "0.8.0"
+    serde_json = "1.0.96"
+    slack-hook = "0.8.0"
