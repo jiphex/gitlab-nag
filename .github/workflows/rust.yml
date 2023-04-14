@@ -18,6 +18,11 @@ jobs:
           override: true
 
       - name: Build
+        if: "! startsWith(github.ref, 'refs/tags/')"
+        run: cargo build --all
+
+      - name: Build (release)
+        if: startsWith(github.ref , 'refs/tags/')
         run: cargo build --all --release && strip target/release/mr-nag && mv target/release/mr-nag target/release/mr-nag_amd64
 
       - name: Release
