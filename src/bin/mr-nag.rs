@@ -45,7 +45,10 @@ struct CmdArgs {
 }
 
 fn open_mr_list_url_for(project: &Project, target_branch: &Option<String>) -> Url {
-    let mut base = Url::parse(&project.web_url).unwrap();
+    // We have to add a trailing slash to the URL or Url::parse will strip off
+    // the last component from the URL
+    let pwurl = format!("{}/", &project.web_url);
+    let mut base = Url::parse(&pwurl).unwrap();
     base = base.join("-/merge_requests/").unwrap();
     let mut mr_query = String::from("?scope=all&state=opened");
     if let Some(tb) = target_branch {
