@@ -20,7 +20,7 @@ jobs:
           override: true
 
       - name: Install-deps
-        run: apt-install libssl-dev
+        run: apt install libssl-dev
 
       - name: Build
         if: "! startsWith(github.ref, 'refs/tags/')"
