@@ -50,8 +50,10 @@ fn open_mr_list_url_for(project: &Project, target_branch: &Option<String>) -> Ur
     let pwurl = format!("{}/", &project.web_url);
     let mut base = Url::parse(&pwurl).unwrap();
     base = base.join("-/merge_requests/").unwrap();
+    // Set the URL query to filter for open ones
     let mut mr_query = String::from("?scope=all&state=opened");
     if let Some(tb) = target_branch {
+        // add the filter for the specified target branch
         mr_query.push_str("&target_branch=");
         mr_query.push_str(tb);
     }
@@ -74,10 +76,12 @@ fn main() -> anyhow::Result<()> {
     let mr_q = mr_q_b.build()?;
     let mrs: Vec<MergeRequest> = mr_q.query(&gitlab).unwrap();
     if let Some(first_mr) = mrs.first() {
-        let target_project_q = projects::Project::builder()
+        // We are only pulling the first here, but we only really need to notify
+        // if there is at least one MR waiting, any others don't really matter.
+        let target_project_query = projects::Project::builder()
             .project(first_mr.project_id.value())
             .build()?;
-        let project: Project = target_project_q.query(&gitlab)?;
+        let project: Project = target_project_query.query(&gitlab)?;
         let mr_list_url = open_mr_list_url_for(&project, &args.target_branch);
         let msg = format!(
             "{} MR is awaiting merge{}",
@@ -87,21 +91,25 @@ fn main() -> anyhow::Result<()> {
                 Some(tb) => format!(" to target branch: {}.", &tb),
             }
         );
+        // print the message to stdout
         println!("{msg}");
         if let Some(hook_url) = &args.slack_webhook_url {
             let hook = Slack::new(hook_url.as_str()).unwrap();
-            let link_atach = AttachmentBuilder::new(msg)
+            // Create a Slack "attachment" that will give a bit more info than the text
+            let msg_attachment = AttachmentBuilder::new(msg)
                 .title(format!("Open Merge requests for {}", project.name))
                 .title_link(mr_list_url.as_str())
                 .footer("These should be merged before the end of the day if possible!")
                 .build()
                 .unwrap();
+            // Create the message and stick the attachment on it
             let payload = PayloadBuilder::new()
                 .username("Gitlab Merge Request Nagbot")
                 .icon_emoji(":pencil:")
-                .attachments(vec![link_atach])
+                .attachments(vec![msg_attachment])
                 .build()
                 .unwrap();
+            // Send the message. We can just panic if it fails because we're about to exit anyway.
             hook.send(&payload).unwrap();
         }
     } else {
