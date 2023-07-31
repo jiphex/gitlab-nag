@@ -12,4 +12,6 @@
     gitlab = { version = "0.1511.0", features = ["reqwest"] }
     secrecy = "0.8.0"
     serde_json = "1.0.96"
-    slack-hook = "0.8.0"
+    chrono = "0.4.24"
+slack-morphism = { version = "1.10.0", features = ["hyper"] }
+tokio = { version = "1.27.0", features = ["full"] }
