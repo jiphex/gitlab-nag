@@ -2,15 +2,12 @@ use anyhow::Context;
 use chrono::Local;
 use clap::Parser;
 use gitlab::{
-    api::{projects::merge_requests, AsyncQuery, Query},
+    api::{projects::merge_requests, AsyncQuery},
     AsyncGitlab, Gitlab, MergeRequest,
 };
 use reqwest::Url;
 use secrecy::{ExposeSecret, SecretString};
-use slack_morphism::{
-    prelude::{SlackApiPostWebhookMessageRequest, SlackClientHyperConnector},
-    slack_blocks, SlackClient, SlackMessageContent,
-};
+use slack_morphism::prelude::*;
 
 /// Notifier to send a Slack Webhook if open Merge Requests exist for a
 /// particular Gitlab project.
@@ -50,22 +47,29 @@ struct CmdArgs {
     min_dwell_secs: Option<i64>,
 }
 
+/// Get the merge requests as per the input args, filtering for project, state (open) and target branch (if specified)
 async fn get_mrs<'a>(
     args: &CmdArgs,
     gitlab: &'a AsyncGitlab,
 ) -> anyhow::Result<impl IntoIterator<Item = MergeRequest>> {
-    let tb = args.target_branch.as_ref().map_or("", |x| &x);
+    let tb = args.target_branch.as_ref().map_or("main", |x| &x);
     let mr_q = merge_requests::MergeRequests::builder()
         .project(args.gitlab_project_id)
         .state(merge_requests::MergeRequestState::Opened)
         .target_branch(tb)
         .build()
         .unwrap();
-    //  mr_q_b = *mr_q_b.target_branch(target_branch);
-    // }
-    // let mr_q = mr_q_b.build()?;
-    let mrs: Vec<MergeRequest> = mr_q.query_async(gitlab).await.unwrap();
-    Ok(mrs)
+    // have to use let ... here to explicitly inform the type (Vec)
+    let merge_requests: Vec<MergeRequest> = mr_q.query_async(gitlab).await.unwrap();
+    Ok(merge_requests)
+}
+
+struct WrappedMR(MergeRequest);
+
+impl SlackMessageTemplate for WrappedMR {
+    fn render_template(&self) -> SlackMessageContent {
+        todo!()
+    }
 }
 
 #[tokio::main]
@@ -78,12 +82,15 @@ async fn main() -> anyhow::Result<()> {
     let now = Local::now();
     for mr in get_mrs(&args, &gitlab).await.unwrap() {
         if let Some(dwell) = args.min_dwell_secs {
-            if now.signed_duration_since(mr.updated_at).num_seconds() > dwell {
+            // Skip this MR and continue to next if the time since update is < dwell time
+            if now.signed_duration_since(mr.updated_at).num_seconds() < dwell {
                 continue;
             }
         }
         let msg = format!(
-            "MR is awaiting merge{}",
+            "MR #{} ({}) is awaiting merge{}",
+            mr.id,
+            mr.title,
             match &args.target_branch {
                 None => ".".to_string(),
                 Some(tb) => format!(" to target branch: {}.", &tb),
@@ -97,9 +104,7 @@ async fn main() -> anyhow::Result<()> {
                 .post_webhook_message(
                     hook_url,
                     &SlackApiPostWebhookMessageRequest::new(
-                        SlackMessageContent::new()
-                            .with_text(msg)
-                            .with_blocks(slack_blocks![]),
+                        WrappedMR(mr).render_template(),
                     ),
                 )
                 .await
