@@ -1,4 +1,3 @@
-
 use anyhow::Context;
 use chrono::Local;
 use clap::Parser;
@@ -9,7 +8,7 @@ use gitlab::{
 use reqwest::Url;
 use secrecy::{ExposeSecret, SecretString};
 use slack_morphism::prelude::*;
-use tracing::{debug,info_span, trace};
+use tracing::{debug, info_span, trace};
 use tracing_subscriber::{prelude::*, EnvFilter};
 
 /// Notifier to send a Slack Webhook if open Merge Requests exist for a
@@ -55,7 +54,7 @@ struct CmdArgs {
 
 /// Get the merge requests as per the input args, filtering for project, state (open) and target branch (if specified)
 #[tracing::instrument(skip_all)]
-async fn get_mrs<'a>(
+async fn get_merge_requsts<'a>(
     args: &CmdArgs,
     gitlab: &'a AsyncGitlab,
 ) -> anyhow::Result<impl IntoIterator<Item = MergeRequest>> {
@@ -92,15 +91,10 @@ impl SlackMessageTemplate for WrappedMR {
                 self.0.id, self.0.title
             ))
             .with_blocks(slack_blocks![
-                some_into(SlackHeaderBlock::new(md!(format!(
+                some_into(SlackSectionBlock::new().with_text(md!(format!(
                     "MR **#{}: [{}]({})**",
                     self.0.id, self.0.title, self.0.web_url
-                )))) // some_into(
-                     // SlackSectionBlock::new().with_text(md!())
-                     // )
-                     // some_into(
-                     //     // SlackSectionBlock::new().with_fields()
-                     // )
+                ))))
             ])
     }
 }
@@ -138,7 +132,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("unable to build gitlab API client")?;
     let now = Local::now();
-    for mr in get_mrs(&args, &gitlab).await.unwrap() {
+    for mr in get_merge_requsts(&args, &gitlab).await.unwrap() {
         let _mr_span = info_span!("processing_merge_request").entered();
         if let Some(dwell) = args.min_dwell_secs {
             // Skip this MR and continue to next if the time since update is < dwell time
