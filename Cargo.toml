@@ -13,6 +13,6 @@
     chrono = "0.4.24"
     slack-morphism = { version = "1.10.0", features = ["hyper"] }
     tokio = { version = "1.27.0", features = ["full"] }
-    tracing = { version = "0.1.37", features = ["release_max_level_verbose"] }
+    tracing = { version = "0.1.37", features = ["release_max_level_debug"] }
     tracing-subscriber = { version = "0.3.17", features = ["env-filter", "time"] }
-tracing-journald = "0.3.0"
+    tracing-journald = "0.3.0"
