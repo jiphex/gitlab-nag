@@ -54,11 +54,11 @@ struct CmdArgs {
 
 /// Get the merge requests as per the input args, filtering for project, state (open) and target branch (if specified)
 #[tracing::instrument(skip_all)]
-async fn get_merge_requsts<'a>(
+async fn get_merge_requsts(
     args: &CmdArgs,
-    gitlab: &'a AsyncGitlab,
+    gitlab: &AsyncGitlab,
 ) -> anyhow::Result<impl IntoIterator<Item = MergeRequest>> {
-    let tb = args.target_branch.as_ref().map_or("", |x| &x);
+    let tb = args.target_branch.as_ref().map_or("", |x| x);
     debug!(
         target_branch = tb,
         project_id = args.gitlab_project_id,
